@@ -598,6 +598,16 @@ int ff_v4l2_context_enqueue_frame(V4L2Context* ctx, const AVFrame* frame)
     return ff_v4l2_buffer_enqueue(avbuf);
 }
 
+int ff_v4l2_context_enqueue_framedummy(V4L2Context* ctx)
+{
+    V4L2Buffer* avbuf = v4l2_getfree_v4l2buf(ctx);
+
+    if (!avbuf)
+        return AVERROR(EAGAIN);
+
+    return ff_v4l2_buffer_enqueue(avbuf);
+}
+
 int ff_v4l2_context_enqueue_packet(V4L2Context* ctx, const AVPacket* pkt)
 {
     V4L2m2mContext *s = ctx_to_m2mctx(ctx);

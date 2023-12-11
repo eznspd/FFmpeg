@@ -193,7 +193,6 @@ static int v4l2_prepare_encoder(V4L2m2mContext *s)
         v4l2_set_timeperframe(s, avctx->framerate.den, avctx->framerate.num);
 
     /* set ext ctrls */
-    v4l2_set_ext_ctrl(s, MPEG_CID(HEADER_MODE), MPEG_VIDEO(HEADER_MODE_SEPARATE), "header mode", 0);
     v4l2_set_ext_ctrl(s, MPEG_CID(BITRATE) , avctx->bit_rate, "bit rate", 1);
     v4l2_set_ext_ctrl(s, MPEG_CID(FRAME_RC_ENABLE), 1, "frame level rate control", 0);
     v4l2_set_ext_ctrl(s, MPEG_CID(GOP_SIZE), avctx->gop_size,"gop size", 1);
@@ -267,6 +266,33 @@ static int v4l2_prepare_encoder(V4L2m2mContext *s)
                       avctx->qmin >= 0);
     v4l2_set_ext_ctrl(s, qmax_cid, qmax, "maximum video quantizer scale",
                       avctx->qmax >= 0);
+
+    if (avctx->flags & AV_CODEC_FLAG_GLOBAL_HEADER) {
+        AVPacket* avpkt;
+        v4l2_set_ext_ctrl(s, MPEG_CID(HEADER_MODE), MPEG_VIDEO(HEADER_MODE_SEPARATE), "header mode", 0);
+        v4l2_set_ext_ctrl(s, MPEG_CID(REPEAT_SEQ_HEADER), 0, "repeat parameter sets", 0);
+
+        ret = ff_v4l2_context_set_status(&s->output, VIDIOC_STREAMON);
+        if (ret)  return ret;
+        ret = ff_v4l2_context_set_status(&s->capture, VIDIOC_STREAMON);
+        if (ret)  return ret;
+        ret = ff_v4l2_context_enqueue_framedummy(&s->output);
+        if (ret)  return ret;
+        avpkt = av_packet_alloc();
+        if (!avpkt)  return AVERROR(ENOMEM);
+        ret = ff_v4l2_context_dequeue_packet(&s->capture, avpkt);
+        if (ret)  return ret;
+
+        avctx->extradata = av_mallocz(avpkt->size + AV_INPUT_BUFFER_PADDING_SIZE);
+        avctx->extradata_size = avpkt->size;
+        memcpy(avctx->extradata, avpkt->data, avpkt->size);
+        av_packet_free(&avpkt);
+
+        v4l2_set_ext_ctrl(s, MPEG_CID(FORCE_KEY_FRAME), 1, "force key frame", 0);
+    } else {
+        v4l2_set_ext_ctrl(s, MPEG_CID(HEADER_MODE), MPEG_VIDEO(HEADER_MODE_JOINED_WITH_1ST_FRAME), "header mode", 0);
+        v4l2_set_ext_ctrl(s, MPEG_CID(REPEAT_SEQ_HEADER), 1, "repeat parameter sets", 0);
+    }
 
     return 0;
 }

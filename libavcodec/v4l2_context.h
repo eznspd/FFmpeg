@@ -184,4 +184,12 @@ int ff_v4l2_context_enqueue_packet(V4L2Context* ctx, const AVPacket* pkt);
  */
 int ff_v4l2_context_enqueue_frame(V4L2Context* ctx, const AVFrame* f);
 
+/**
+ * Enqueues a dummy buffer to a V4L2Context without an AVFrame
+ *
+ * @param[in] ctx The V4L2Context to enqueue to.
+ * @return 0 in case of success, a negative error otherwise.
+ */
+int ff_v4l2_context_enqueue_framedummy(V4L2Context* ctx);
+
 #endif // AVCODEC_V4L2_CONTEXT_H
